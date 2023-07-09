@@ -1,0 +1,18 @@
+\import Paths
+\import Set
+
+\func \infix 1 =0 {A : \Type} (x y : A) => Trunc0 (x = y)
+
+\func \infixr 9 *>0 {A : \Type} {a a' a'' : A} (p : a =0 a') (q : a' =0 a'') : a =0 a''
+  | in0 p, in0 q => in0 (p *> q)
+
+\func *>0-assoc {A : \Type} {a1 a2 a3 a4 : A} (p : a1 =0 a2) (q : a2 =0 a3) (r : a3 =0 a4)
+  : (p *>0 q) *>0 r = p *>0 (q *>0 r)
+  | in0 p, in0 q, in0 r => pmap in0 (*>-assoc p q r)
+
+\func transport0 {A : \Type} (B : A -> \Set) {a a' : A} (p : a =0 a') (b : B a) : B a' \elim p
+  | in0 p => transport B p b
+
+\func transport0_*>0 {A : \Type} (B : A -> \Set) {a a' a'' : A} (p : a =0 a') (q : a' =0 a'') (b : B a)
+  : transport0 B (p *>0 q) b = transport0 B q (transport0 B p b) \elim p, q
+  | in0 p, in0 q => transport_*> B p q b

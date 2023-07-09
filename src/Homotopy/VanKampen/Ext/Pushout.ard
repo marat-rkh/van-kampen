@@ -1,0 +1,8 @@
+\import Function.Meta
+\import Homotopy.Pushout
+\import Paths
+
+\func flip {A B C : \Type} {f : A -> B} {g : A -> C} (p : PushoutData f g) : PushoutData g f
+  | pinl b => pinr b
+  | pinr c => pinl c
+  | pglue a => inv $ PushoutData.ppglue a

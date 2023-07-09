@@ -1,0 +1,172 @@
+\import Equiv
+\import Equiv.Sigma
+\import Function.Meta (repeat)
+\import Homotopy.Pushout
+\import Homotopy.VanKampen.Paths0
+\import Meta
+\import Paths
+\import Paths.Meta
+\import Set
+\open PushoutData (ppglue)
+
+\class VanKampen \noclassifying {A B C : \Type} (f : A -> B) (g : A -> C) (b0 : B) {
+  \truncated \data CodeB (b : B) : \Set
+    | bb (b0 = b)
+    | \infixl 5 :bb: {x y : A} (CodeB (f x)) (\Sigma (g x = g y) (f y = b))
+    | bb-quot1 {a : A} (p1 : b0 = f a) (p2 : f a = b)
+    : bb p1 :bb: (idp, p2) = bb (p1 *> p2)
+    | bb-quot2 {x y z : A} (co : CodeB (f x)) (q : g x = g y) (p1 : f y = f z) (p2 : f z = b)
+    : co :bb: (q, p1) :bb: (idp, p2) = co :bb: (q, p1 *> p2)
+    | bb-quot3 {x y z : A} (co : CodeB (f x)) (q1 : g x = g y) (q2 : g y = g z) (p : f z = b)
+    : co :bb: (q1, idp) :bb: (q2, p) = co :bb: (q1 *> q2, p)
+
+  \truncated \data CodeC (c : C) : \Set
+    | \infixl 5 :cc: {a : A} (CodeB (f a)) (g a = c)
+    | cc-quot {x y : A} (co : CodeB (f x)) (q1 : g x = g y) (q2 : g y = c)
+    : co :bb: (q1, idp) :cc: q2 = co :cc: (q1 *> q2)
+
+  \func :bb:idp {a : A} (_ : CodeC (g a)) : CodeB (f a)
+    | :cc: co p => co :bb: (p, idp)
+    | cc-quot co q1 q2 => path (bb-quot3 _ _ _ _)
+
+  \func code-c-append2 {a a' : A} {c : C} (co : CodeC (g a)) (pair : \Sigma (f a = f a') (g a' = c)) : CodeC c \elim co
+    | :cc: co p' => (co :bb: (p', pair.1)) :cc: pair.2
+    | cc-quot co q1 q2 => pmap (__ :cc: pair.2) (path (bb-quot3 _ _ _ _))
+
+  \func code-b-idp-idp=code-b {a : A} (co : CodeB (f a)) : co :bb: (idp, idp) = co
+    | bb p => path (bb-quot1 _ _)
+    | :bb: co (q, p) => path (bb-quot2 _ _ _ _)
+
+  \func code (po : PushoutData f g) : \Set
+    | pinl b => CodeB b
+    | pinr c => CodeC c
+    | pglue a => equiv= code-b-equiv-code-c
+
+  \func code-b-equiv-code-c {a : A} : QEquiv {CodeB (f a)} {CodeC (g a)} \cowith
+    | f => __ :cc: idp
+    | ret => :bb:idp
+    | ret_f => code-b-idp-idp=code-b
+    | f_sec (co : CodeC (g a)) : co `:bb:idp :cc: idp = co \with {
+      | :cc: co p => path (cc-quot _ _ _)
+    }
+
+  \func transport-code-b-pglue (x : A) (co : CodeB (f x)) : transport code (ppglue x) co = co :cc: idp => idp
+
+  \func transport-code-c-inv-pglue (x x' : A) (co : CodeB (f x)) (q : g x = g x')
+    : transport code (inv (ppglue x')) (co :cc: q) = (co :cc: q) `:bb:idp =>
+    transport_inv_func code (ppglue x') :bb:idp code-b-idp-idp=code-b (co :cc: q)
+
+  \func po0 : PushoutData f g => pinl b0
+
+  \func idp-code : code po0 => bb idp
+
+  \func encode (po : PushoutData f g) (p : po0 =0 po) : code po => transport0 code p idp-code
+
+  -- TODO Why do I have to use arrow return type here?
+  \func decode (po : PushoutData f g) : code po -> po0 =0 po \elim po
+    | pinl b => decode-CodeB
+    | pinr c => decode-CodeC
+    | pglue a => pathOver decode-pglue
+    \where {
+      \func decode-CodeB {b : B} (co : CodeB b) : po0 =0 pinl b
+        | bb p => in0 (pmap pinl p)
+        | :bb: {x} {y} co (q, p) => decode-CodeB co *>0 in0 (ppglue x *> pmap pinr q *> inv (ppglue y) *> pmap pinl p)
+        | bb-quot1 {x} p1 p2 => run {
+          rewrite (*>-lemma1 _ _ _),
+          rewrite (pmap_*>-comm pinl _ _),
+          idp
+        }
+        | bb-quot2 {x} {y} {z} co q p1 p2 => run {
+          rewrite (*>0-assoc _ _ _),
+          rewrite (*>-lemma1 _ _ _),
+          repeat {3} (rewrite (*>-assoc _ _ _)),
+          rewrite (pmap_*>-comm pinl _ _),
+          idp
+        }
+        -- TODO can we simplify these *>-assoc manipulations somehow?
+        | bb-quot3 {x} {y} {z} co q1 q2 p => run {
+          rewrite (*>0-assoc _ _ _),
+          rewrite (inv (*>-assoc (ppglue x) (pmap pinr q1) _)),
+          rewrite (*>-lemma2 _ _ _),
+          rewrite (pmap_*>-comm pinr _ _),
+          repeat {2} (rewrite (*>-assoc _ _ _)),
+          idp
+        }
+
+      \func decode-CodeC {c : C} (co : CodeC c) : po0 =0 pinr c
+        | :cc: {x} co p => decode-CodeB co *>0 in0 (ppglue x *> pmap pinr p)
+        | cc-quot {x} {y} co q1 q2 => run {
+          rewrite (*>0-assoc _ _ _),
+          rewrite (inv (*>-assoc (ppglue x) (pmap pinr q1) _)),
+          rewrite (*>-lemma2 _ _ _),
+          rewrite (pmap_*>-comm pinr _ _),
+          rewrite (*>-assoc _ _ _),
+          idp
+        }
+
+      \func decode-pglue {a : A} : transport (\lam po => code po -> po0 =0 po) (path (pglue a)) decode-CodeB = decode-CodeC =>
+        simp_coe (\lam _ => transport-path-lemma _ _)
+
+      \func *>-lemma1 {T : \Type} {t1 t2 t3 t4 : T} (p1 : t1 = t2) (p2 : t2 = t3) (p3 : t2 = t4)
+        : p1 *> p2 *> idp *> inv p2 *> p3 = p1 *> p3 \elim p1, p2, p3
+        | idp, idp, idp => idp
+
+      \func *>-lemma2 {T : \Type} {t1 t t2 t3 : T} (p1 : t1 = t2) (p2 : t = t2) (p3 : t2 = t3)
+        : (p1 *> inv p2) *> p2 *> p3 = p1 *> p3
+      \elim p1, p2
+        | idp, idp => repeat {2} (rewrite (idp_*> p3)) idp
+
+      \func transport-path-lemma {po po' : PushoutData f g} (p : po = po') (q : po0 =0 po)
+        : transport (po0 =0) p q = q *>0 in0 p \elim p, q
+        | idp, in0 q => idp
+    }
+
+  \func Loop1-Pushout : (po0 =0 po0) = code po0 => path (iso (encode po0) (decode po0) encode-decode decode-encode)
+    \where {
+      \func encode-decode {po : PushoutData f g} (p : po0 =0 po) : decode po (encode po p) = p \elim p
+        | in0 idp => idp
+
+      \func decode-encode {b : B} (co : CodeB b) : encode (pinl b) (decode (pinl b) co) = co \elim co
+        | bb p => transport-codeB p idp-code *> pmap bb (idp_*> p)
+        -- TODO can we avoid writing 'rewrite' in every line?
+        | :bb: {x} {y} co (q, p) => run {
+          rewrite (transport0_*>0 code {po0} {pinl (f x)} {pinl b} _ _ _),
+          rewrite (decode-encode co),
+          rewrite (transport_*> code {pinl (f x)} {pinr (g x)} {pinl b} _ _ _),
+        -- TODO I do not need this, but without it the expected type contains "redundant" transport
+          rewrite (transport-code-b-pglue x co),
+          rewrite (transport_*> code {pinr (g x)} {pinr (g y)} {pinl b} _ _ _),
+          rewrite (transport-codeC _ _),
+          rewrite (transport_*> code {pinr (g y)} {pinl (f y)} {pinl b} _ _ _),
+          rewrite (transport_inv_func code (ppglue y) :bb:idp code-b-idp-idp=code-b _),
+          rewrite (transport-codeB _ _),
+          repeat {2} (rewrite (idp_*> _)) idp
+        }
+
+      \func transport-codeB {b b' : B} (p : b = b') (co : CodeB b) : transport code (pmap pinl p) co = co *bb> p \elim p
+        | idp => rewrite (*bb>idp-lemma co) idp
+        \where {
+          \func \infixl 4 *bb> {b b' : B} (co : CodeB b) (t : b = b')  : CodeB b' \elim co
+            | bb p => bb (p *> t)
+            | :bb: co (q, p) => co :bb: (q, p *> t)
+            | bb-quot1 p1 p2 => path (bb-quot1 _ _) *> pmap bb (inv (*>-assoc _ _ _))
+            | bb-quot2 co q p1 p2 => path (bb-quot2 _ _ _ _) *> pmap (\lam p' => co :bb: (q, p')) (inv (*>-assoc _ _ _))
+            | bb-quot3 co q1 q2 p1 => path (bb-quot3 _ _ _ _)
+
+          \func *bb>idp-lemma {b : B} (co : CodeB b) : co *bb> idp = co
+            | bb _ => idp
+            | :bb: _ _ => idp
+        }
+
+      \func transport-codeC {c c' : C} (p : c = c') (co : CodeC c) : transport code (pmap pinr p) co = co *cc> p \elim p
+        | idp => rewrite (*cc>idp-lemma co) idp
+        \where {
+          \func \infixl 4 *cc> {c c' : C} (co : CodeC c) (t : c = c')  : CodeC c' \elim co
+            | :cc: co p => co :cc: (p *> t)
+            | cc-quot co q1 q2 => path (cc-quot _ _ _) *> pmap (co :cc: __) (inv (*>-assoc _ _ _))
+
+          \func *cc>idp-lemma {c : C} (co : CodeC c) : co *cc> idp = co
+            | :cc: _ _ => idp
+        }
+    }
+}

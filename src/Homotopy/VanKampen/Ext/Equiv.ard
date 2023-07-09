@@ -1,0 +1,8 @@
+\import Equiv
+
+\func symEquiv {A B : \Type} (e : Equiv {A} {B}) : Equiv {B} {A} \cowith
+  | f => e.ret
+  | ret => e.f
+  | sec => e.f
+  | ret_f => e.f_ret
+  | f_sec => e.ret_f

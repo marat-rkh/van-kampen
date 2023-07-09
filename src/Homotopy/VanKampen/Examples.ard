@@ -1,0 +1,75 @@
+\import Data.Bool
+\import Equiv (QEquiv)
+\import Equiv.Sigma
+\import Function.Meta
+\import Homotopy.Pushout
+\import Homotopy.Sphere.Circle
+\import Homotopy.VanKampen.Paths0
+\import Homotopy.VanKampen.VanKampen
+\import Paths
+
+\func Loop1-S1 (s : Sphere1) : (s =0 s) = Int =>
+  transport
+      (\lam T => \Pi (t : T) -> (t =0 t) = Int)
+      (inv $ equiv= S1-equiv-Pushout-Bool-Unit-Unit)
+      Loop1-Pushout-Bool-Unit-Unit=Int
+      s
+  \where {
+    \open VanKampen
+
+    \func S1-equiv-Pushout-Bool-Unit-Unit : QEquiv {Sphere1} {PushoutData Bool->Unit Bool->Unit} => {?}
+
+    \func Loop1-Pushout-Bool-Unit-Unit=Int (po : PushoutData Bool->Unit Bool->Unit) : (po =0 po) = Int
+      | pinl b =>
+        \let vk => \new VanKampen Bool->Unit Bool->Unit b
+        \in vk.Loop1-Pushout *> equiv= code-equiv-Int
+      | pinr c => {?}
+      | pglue a => {?}
+
+    \func code-equiv-Int {VK : VanKampen Bool->Unit Bool->Unit ()} : QEquiv {CodeB ()} {Int} \cowith
+      | f => code->Int
+      | ret => {?}
+      | ret_f => {?}
+      | f_sec => {?}
+      \where {
+        -- () = () ==> 0
+        -- co, b1 = b2, b2 = ()
+        --    b1 = b2 : co, b1 = b1, b1 = () ==> co
+        --    b1 != b2: co, b1 = b2, b2 = () ==> b1b2 ==> 01 or 10
+
+        -- CodeB here contains even number of Bool elements:
+        -- <>, b1b2, b1b2b3b4, etc.
+        -- <> is zero
+        -- else if the last bit is 0, we count the number of 1s and return +count
+        -- else if the last bit is 1, we count the number of 0s and return -count
+        \func code->Int {VK : VanKampen Bool->Unit Bool->Unit ()} (co : CodeB ()) : Int
+          | bb p => pos 0
+          | :bb: {false} {false} co (q, p) => code->Int co
+          | :bb: {true} {true} co (q, p) => code->Int co
+          | :bb: {false} {true} co (q, p) => neg (code-len co)
+          | :bb: {true} {false} co (q, p) => pos (code-len co)
+          | bb-quot1 p1 p2 => {?}
+          | bb-quot2 co q p1 p2 => {?}
+          | bb-quot3 co q1 q2 p => {?}
+
+        \func code-len {VK : VanKampen Bool->Unit Bool->Unit ()} (co : CodeB ()) : Nat
+          | bb p => 0
+          | :bb: co (q, p) => {?}
+          | bb-quot1 p1 p2 i1 => {?}
+          | bb-quot2 co q p1 p2 i1 => {?}
+          | bb-quot3 co q1 q2 p i1 => {?}
+
+        -- () ()
+        -- () b idp b p () -> () ()
+        -- () b1 q b2 p ()
+        -- () b1 q1 b2 p1 b idp b p2 () -> () b1 q1 b2 p1 b p2 ()
+        -- () b1 q1 b2 p1 b3 q2 b4 p2 ()
+        \func reduce {VK : VanKampen Bool->Unit Bool->Unit ()} (co : CodeB ()) : CodeB () => {?}
+      }
+
+    \func Bool->Unit (_ : Bool) => ()
+  }
+
+-- Ultimately, we are interested in Example 9 from the paper.
+-- We want to show that:
+-- Loop1 (PushoutData {A} {B} {C}) = code (PushoutData {A} {B} {C}) = PushoutData {Loop1 A} {Loop1 B} {Loop1 C}
