@@ -10,7 +10,7 @@
 \import Meta
 \import Paths
 \import Paths.Meta
-\open VanKampen (CodeB, CodeC)
+\open VanKampen (:cb:, CodeB, CodeC)
 \open PushoutData (ppglue)
 
 \class VanKampen2 \noclassifying {A B C : \Type} (f : A -> B) (g : A -> C) {
@@ -51,22 +51,27 @@
             run {
               rewrite (VanKampen.transport-code-b-pglue {vk _} a2 _),
               rewrite (transport-code-c-inv-pglue (equiv-b co)),
-              equiv-idp-lemma a1 a2 co
+              rewrite (VanKampen.:bb:idp=:cb:idp {vk-flip _} _) (equiv-b-equiv-c-lemma co idp)
             }
 
           \func transport-code-c-inv-pglue {c : C} {a : A} (co : c-code c (pinl (f a)))
             : transport (c-code c) (ppglue a) co = VanKampen.:bb:idp {vk-flip _} co \elim co
             | :cc: {a'} co q => VanKampen.transport-code-c-inv-pglue {vk-flip c} a' a co q
 
-          \func equiv-idp-lemma (a1 : A) (a2 : A) (co : b-code (f a1) (pinl (f a2)))
-            : VanKampen.:bb:idp {vk-flip _} (equiv-b co) = equiv-c (co :cc: idp) \elim co
-            | bb p => idp
-            | :bb: co (q, p) => {?}
-
-          \func equiv-b-lemma {x y z : A} {b : B} (co : CodeB {vk (f x)} (f y)) (q : g y = g z) (p : f z = b)
-            : equiv-b (co :bb: (q, p)) = VanKampen.code-c-append2 {vk-flip _} (equiv-b co) (q, p) \elim co
-            | bb p' => {?}
-            | :bb: co (q2, p2) => {?}
+          -- If we append anything, then prepend idp, we get the same result as if we first prepend then append. Example:
+          --
+          -- b p0 :bb: (q, p) =|equiv-b|=>
+          -- b idp :bb: (p0, q) :cc: p =|:cb:q2|=>
+          -- b idp :bb: (p0, q) :bb: (p, q2)
+          --
+          -- b p0 :bb: (q, p) :cc: q2 =|equiv-c|=>
+          -- b idp :bb: (p0, q) :bb: (p, q2)
+          \func equiv-b-equiv-c-lemma {a1 : A} {a2 : A} {c : C} (co : b-code (f a1) (pinl (f a2))) (q : g a2 = c)
+            : equiv-b co :cb: {vk-flip _} q = equiv-c (co :cc: q) \elim co
+            -- TODO it is unclear why equiv-c is not reduced here
+            | bb p => rewrite inv_inv ({?} : bb idp :bb: {vk-flip _} (p, q) = equiv-c (bb p :cc: q))
+            -- TODO try to prove a property about left side to make an inductive call
+            | :bb: co (q2, p) => {?}
         }
 
       \class CodeBProperties \noclassifying {A B C : \Type} {f : A -> B} {g : A -> C} (vk : ∀ b0 (VanKampen f g b0)) {
@@ -183,8 +188,7 @@
 -- TODO unused?
 \func coe_Equiv {A B : I -> \Type} {e : Equiv {A left} {B left}} {e' : Equiv {A right} {B right}}
                 (f : \Pi (a : A left) -> coe B (e a) right = e' (coe A a right))
-  : coe (\lam i => Equiv {A i} {B i}) e right = e'
-  => transport_Equiv {I} {A} {B} (path (\lam i => i)) f
+  : coe (\lam i => Equiv {A i} {B i}) e right = e' => transport_Equiv {I} {A} {B} (path (\lam i => i)) f
 
 \func transport_Equiv {A : \Type} {B C : A -> \Type} {a a' : A} (p : a = a')
                       {e : Equiv {B a} {C a}} {e' : Equiv {B a'} {C a'}}
