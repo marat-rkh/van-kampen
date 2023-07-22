@@ -1,8 +1,7 @@
-\import Equiv (Equiv, QEquiv, transEquiv)
+\import Equiv (Equiv, QEquiv)
 \import Equiv.Sigma
 \import Function.Meta
 \import Homotopy.Pushout
-\import Homotopy.VanKampen.Ext.Equiv
 \import Homotopy.VanKampen.Ext.Pushout
 \import Homotopy.VanKampen.Paths0
 \import Homotopy.VanKampen.VanKampen
@@ -10,6 +9,7 @@
 \import Meta
 \import Paths
 \import Paths.Meta
+-- TODO false positive
 \open VanKampen (:cb:, CodeB, CodeC)
 \open PushoutData (ppglue)
 
@@ -31,154 +31,83 @@
 
       \func c-code (c : C) (po : PushoutData f g) => VanKampen.code {vk-flip c} (flip po)
 
+      -- TODO can we replace Equiv with QEquiv here? Because both equiv-b and equiv-c are QEquiv.
       \func b-code-equiv-c-code (a : A) (po : PushoutData f g) : Equiv {b-code (f a) po} {c-code (g a) po} \elim po
         | pinl b => equiv-b
         | pinr c => equiv-c
         | pglue a2 => pathOver (transport_Equiv {PushoutData f g} {b-code (f a) __} {c-code (g a) __} (ppglue a2) pglue-lemma)
         \where {
-          \func equiv-b {a : A} {b : B} : Equiv {b-code (f a) (pinl b)} {c-code (g a) (pinl b)} =>
-            CodeBProperties.code-b-equiv-reversed-code-b {\new CodeBProperties vk} `transEquiv`
-            VanKampen.code-b-equiv-code-c {vk _} `transEquiv`
-            code-c-equiv-reversed-code-c
+          \func equiv-b {a : A} {b : B} : QEquiv {b-code (f a) (pinl b)} {c-code (g a) (pinl b)} \cowith
+            | f => idp:cc: vk vk-flip
+            | ret => idp:bb: vk vk-flip
+            | ret_f => idp-idp-code-b=code-b vk vk-flip
+            | f_sec => idp-idp-code-c=code-c vk vk-flip
 
-          \func equiv-c {a : A} {c : C} : Equiv {b-code (f a) (pinr c)} {c-code (g a) (pinr c)} =>
-            code-c-equiv-reversed-code-c `transEquiv`
-            symEquiv (VanKampen.code-b-equiv-code-c {vk-flip _}) `transEquiv`
-            symEquiv (CodeBProperties.code-b-equiv-reversed-code-b {\new CodeBProperties vk-flip})
+          \func equiv-c {a : A} {c : C} : QEquiv {b-code (f a) (pinr c)} {c-code (g a) (pinr c)} \cowith
+            | f => idp:bb: vk-flip vk
+            | ret => idp:cc: vk-flip vk
+            | ret_f => idp-idp-code-c=code-c vk-flip vk
+            | f_sec => idp-idp-code-b=code-b vk-flip vk
+
+          \func idp:cc: {A B C : \Type} {f : A -> B} {g : A -> C}
+                        (vk : ∀ b0 (VanKampen f g b0)) (vk-flip : ∀ c0 (VanKampen g f c0))
+                        {a : A} {b : B} (co : VanKampen.CodeB {vk (f a)} b) : VanKampen.CodeC {vk-flip (g a)} b \elim co
+            | bb p => bb idp :cc: p
+            | co :bb: (q, p) => idp:cc: vk vk-flip co :cb: {vk-flip _} q :cc: p
+            | bb-quot1 p1 p2 => cc-quot {vk-flip _} _ _ _
+            | bb-quot2 co q p1 p2 => cc-quot {vk-flip _} _ _ _
+            -- TODO proofs look exactly the same, there should be a tactic like mcases for this
+            | bb-quot3 (bb p0) q1 q2 p => pmap (__ :cc: {vk-flip _} p) (path (bb-quot2 {vk-flip _} _ _ _ _))
+            | bb-quot3 (co :bb: (q0, p0)) q1 q2 p => pmap (__ :cc: {vk-flip _} p) (path (bb-quot2 {vk-flip _} _ _ _ _))
+
+          \func idp:bb: {A B C : \Type} {f : A -> B} {g : A -> C}
+                        (vk : ∀ b0 (VanKampen f g b0)) (vk-flip : ∀ c0 (VanKampen g f c0))
+                        {a1 : A} {b : B} (co : VanKampen.CodeC {vk-flip (g a1)} b) : VanKampen.CodeB {vk (f a1)} b \elim co
+            | co :cc: p => idp:cc: vk-flip vk co :cb: {vk _} p
+            -- TODO proofs look exactly the same, there should be a tactic like mcases for this
+            | cc-quot (bb p) q1 q2 => path (bb-quot2 {vk _} _ _ _ _)
+            | cc-quot (co :bb: (q0, p)) q1 q2 => path (bb-quot2 {vk _} _ _ _ _)
+
+          \func idp-idp-code-b=code-b {A B C : \Type} {f : A -> B} {g : A -> C}
+                                      (vk : ∀ b0 (VanKampen f g b0)) (vk-flip : ∀ c0 (VanKampen g f c0))
+                                      {a : A} {b : B} (co : VanKampen.CodeB {vk (f a)} b)
+            : idp:bb: vk vk-flip (idp:cc: vk vk-flip co) = co \elim co
+            | bb p => path (bb-quot1 {vk _} _ _) *> rewrite (idp_*> _) idp
+            | co :bb: (q, p) => idp:cc:-:cb:-lemma1 vk vk-flip co q p
+
+          \func idp:cc:-:cb:-lemma1 {A B C : \Type} {f : A -> B} {g : A -> C}
+                                    (vk : ∀ b0 (VanKampen f g b0)) (vk-flip : ∀ c0 (VanKampen g f c0))
+                                    {a1 a2 a3 : A} {b : B}
+                                    (co : VanKampen.CodeB {vk (f a1)} (f a2)) (q : g a2 = g a3) (p : f a3 = b)
+            : idp:cc: vk-flip vk (idp:cc: vk vk-flip co :cb: {vk-flip _} q) :cb: {vk _} p = co :bb: (q, p) \elim co
+            | bb p0 => pmap (__ :bb: {vk _} (q, p)) (path (bb-quot1 {vk _} _ _)) *> rewrite (idp_*> _) idp
+            | co :bb: (q0, p0) => pmap (__ :bb: {vk _} (q, p)) (idp:cc:-:cb:-lemma1 vk vk-flip _ _ _)
+
+          \func idp-idp-code-c=code-c {A B C : \Type} {f : A -> B} {g : A -> C}
+                                      (vk : ∀ b0 (VanKampen f g b0)) (vk-flip : ∀ c0 (VanKampen g f c0))
+                                      {a : A} {b : B} (co : VanKampen.CodeC {vk-flip (g a)} b)
+            : idp:cc: vk vk-flip (idp:bb: vk vk-flip co) = co \elim co
+            | co :cc: p => idp:cc:-:cb:-lemma2 vk vk-flip _ _
+
+          \func idp:cc:-:cb:-lemma2 {A B C : \Type} {f : A -> B} {g : A -> C}
+                                    (vk : ∀ b0 (VanKampen f g b0)) (vk-flip : ∀ c0 (VanKampen g f c0))
+                                    {a1 a2 : A} {b : B}
+                                    (co : VanKampen.CodeB {vk-flip (g a1)} (g a2)) (p : f a2 = b)
+            : idp:cc: vk vk-flip (idp:cc: vk-flip vk co :cb: {vk _} p) = co :cc: p \elim co
+            | bb p0 => pmap (__ :cc: {vk-flip _} p) (path (bb-quot1 {vk-flip _} _ _)) *> rewrite (idp_*> _) idp
+            | co :bb: (q0, p0) => pmap (__ :cc: {vk-flip _} p) (idp:cc:-:cb:-lemma1 vk-flip vk _ _ _)
 
           \func pglue-lemma {a1 a2 : A} (co : b-code (f a1) (pinl (f a2)))
             : transport (c-code (g a1)) (ppglue a2) (equiv-b co) = equiv-c (transport (b-code (f a1)) (ppglue a2) co) =>
             run {
               rewrite (VanKampen.transport-code-b-pglue {vk _} a2 _),
               rewrite (transport-code-c-inv-pglue (equiv-b co)),
-              rewrite (VanKampen.:bb:idp=:cb:idp {vk-flip _} _) (equiv-b-equiv-c-lemma co idp)
+              rewrite (VanKampen.:bb:idp=:cb:idp {vk-flip _} _) idp
             }
 
           \func transport-code-c-inv-pglue {c : C} {a : A} (co : c-code c (pinl (f a)))
             : transport (c-code c) (ppglue a) co = VanKampen.:bb:idp {vk-flip _} co \elim co
             | :cc: {a'} co q => VanKampen.transport-code-c-inv-pglue {vk-flip c} a' a co q
-
-          -- If we append anything, then prepend idp, we get the same result as if we first prepend then append. Example:
-          --
-          -- b p0 :bb: (q, p) =|equiv-b|=>
-          -- b idp :bb: (p0, q) :cc: p =|:cb:q2|=>
-          -- b idp :bb: (p0, q) :bb: (p, q2)
-          --
-          -- b p0 :bb: (q, p) :cc: q2 =|equiv-c|=>
-          -- b idp :bb: (p0, q) :bb: (p, q2)
-          \func equiv-b-equiv-c-lemma {a1 : A} {a2 : A} {c : C} (co : b-code (f a1) (pinl (f a2))) (q : g a2 = c)
-            : equiv-b co :cb: {vk-flip _} q = equiv-c (co :cc: q) \elim co
-            -- TODO it is unclear why equiv-c is not reduced here
-            | bb p => rewrite inv_inv ({?} : bb idp :bb: {vk-flip _} (p, q) = equiv-c (bb p :cc: q))
-            -- TODO try to prove a property about left side to make an inductive call
-            | :bb: co (q2, p) => {?}
-        }
-
-      \class CodeBProperties \noclassifying {A B C : \Type} {f : A -> B} {g : A -> C} (vk : ∀ b0 (VanKampen f g b0)) {
-        \func code-b-equiv-reversed-code-b {a : A} {b : B} : QEquiv {CodeB {vk (f a)} b} {CodeB {vk b} (f a)} \cowith
-          | f => reverse __
-          | ret => reverse __
-          | ret_f => reverse-involution
-          | f_sec => reverse-involution
-          \where {
-            \func reverse {b1 b2 : B} (co : CodeB {vk b1} b2) : CodeB {vk b2} b1 \elim co
-              | bb p => bb (inv p)
-              | :bb: co (q, p) => reverse-acc (bb (inv p)) co q
-              | bb-quot1 p1 p2 => path (bb-quot1 {vk _} _ _) *> rewrite (*>_inv-comm _ _) idp
-              | bb-quot2 co q p1 p2 => pmap (reverse-acc __ co q) (
-                path (bb-quot1 {vk _} _ _) *> rewrite (inv (*>_inv-comm p1 p2)) idp
-              )
-              | bb-quot3 co q1 q2 p => reverse-acc-lemma _ _ _ _
-
-            \func reverse-acc {a1 a2 : A} {b1 b2 : B}
-                              (acc : CodeB {vk b1} (f a1)) (co : CodeB {vk b2} (f a2)) (q : g a2 = g a1)
-              : CodeB {vk b1} b2 \elim co
-              | bb p => acc :bb: (inv q, inv p)
-              | :bb: co (q2, p) => reverse-acc (acc :bb: (inv q, inv p)) co q2
-              | bb-quot1 p1 p2 => path (bb-quot2 {vk _} _ _ _ _) *> rewrite (*>_inv-comm _ _) idp
-              | bb-quot2 co q2 p1 p2 => pmap (reverse-acc __ co q2) (
-                path (bb-quot2 {vk _} _ _ _ _) *> rewrite (inv (*>_inv-comm p1 p2)) idp
-              )
-              | bb-quot3 co q2 q3 p => reverse-acc-lemma _ _ _ _
-
-            \func reverse-acc-lemma {a1 a2 a3 : A} {b1 b2 : B}
-                                    (acc : CodeB {vk b1} (f a1)) (q1 : g a3 = g a1)
-                                    (co : CodeB {vk b2} (f a2)) (q2 : g a2 = g a3)
-              : reverse-acc (acc :bb: (inv q1, idp)) co q2 = reverse-acc acc co (q2 *> q1) \elim co
-              | bb p => path (bb-quot3 {vk _} _ _ _ _) *> rewrite (*>_inv-comm _ _) idp
-              | :bb: co (q, p) => pmap (reverse-acc __ co q) (
-                path (bb-quot3 {vk _} _ _ _ _) *> rewrite (inv (*>_inv-comm _ _)) idp
-              )
-
-            \func reverse-involution {b1 b2 : B} (co : CodeB {vk b1} b2) : reverse (reverse co) = co
-              | bb p => rewrite (inv_inv p) idp
-              | :bb: co (q, p) => run {
-                rewrite (reverse-acc-involution (bb (inv p)) co q),
-                repeat {2} (rewrite (inv_inv _)) idp
-              }
-
-            \func reverse-acc-involution {a1 a2 : A} {b1 b2 : B}
-                                         (acc : CodeB {vk b1} (f a1)) (co : CodeB {vk b2} (f a2)) (q : g a2 = g a1)
-              : reverse (reverse-acc acc co q) = reverse-acc co acc (inv q) \elim co
-              | bb p2 => rewrite (inv_inv p2) idp
-              | :bb: co (q2, p2) => run {
-                rewrite (reverse-acc-involution _ co q2),
-                repeat {2} (rewrite (inv_inv _)) idp
-              }
-          }
-      }
-
-      \func code-c-equiv-reversed-code-c {b : B} {c : C} : QEquiv {CodeC {vk b} c} {CodeC {vk-flip c} b} \cowith
-        | f => reverse vk vk-flip __
-        | ret => reverse vk-flip vk __
-        | ret_f => reverse-involution vk vk-flip
-        | f_sec => reverse-involution vk-flip vk
-        \where {
-          \func reverse {B C : \Type} {f : A -> B} {g : A -> C}
-                        (vk : ∀ b0 (VanKampen f g b0)) (vk-flip : ∀ c0 (VanKampen g f c0))
-                        {b : B} {c : C}
-                        (co : CodeC {vk b} c)
-            : CodeC {vk-flip c} b \elim co
-            | :cc: co p => reverse-acc vk vk-flip (bb {vk-flip _} (inv p)) co
-            | cc-quot co q1 q2 => pmap (reverse-acc vk vk-flip __ co) (
-              path (bb-quot1 {vk-flip _} _ _) *> rewrite (inv (*>_inv-comm q1 q2)) idp
-            )
-
-          \func reverse-acc {B C : \Type} {f : A -> B} {g : A -> C}
-                            (vk : ∀ b0 (VanKampen f g b0)) (vk-flip : ∀ c0 (VanKampen g f c0))
-                            {a : A} {b : B} {c : C}
-                            (acc : CodeB {vk-flip c} (g a)) (co : CodeB {vk b} (f a))
-            : CodeC {vk-flip c} b \elim co
-            | bb p => acc :cc: inv p
-            | :bb: co (q, p) => reverse-acc vk vk-flip (acc :bb: (inv p, inv q)) co
-            | bb-quot1 p1 p2 => path (cc-quot {vk-flip _} _ _ _) *> rewrite (*>_inv-comm _ _) idp
-            | bb-quot2 co q p1 p2 => pmap (reverse-acc vk vk-flip __ co) (
-              path (bb-quot3 {vk-flip _} _ _ _ _) *> rewrite (inv (*>_inv-comm p1 p2)) idp
-            )
-            | bb-quot3 co q1 q2 p => pmap (reverse-acc vk vk-flip __ co) (
-              path (bb-quot2 {vk-flip _} _ _ _ _) *> rewrite (inv (*>_inv-comm q1 q2)) idp
-            )
-
-          \func reverse-involution {B C : \Type} {f : A -> B} {g : A -> C}
-                                   (vk : ∀ b0 (VanKampen f g b0)) (vk-flip : ∀ c0 (VanKampen g f c0))
-                                   {b : B} {c : C}
-                                   (co : CodeC {vk b} c)
-            : reverse vk-flip vk (reverse vk vk-flip co) = co \elim co
-            | :cc: co p => run {
-              rewrite (reverse-acc-involution vk vk-flip (bb (inv p)) co),
-              rewrite (inv_inv _) idp
-            }
-
-          \func reverse-acc-involution {B C : \Type} {f : A -> B} {g : A -> C}
-                                       (vk : ∀ b0 (VanKampen f g b0)) (vk-flip : ∀ c0 (VanKampen g f c0))
-                                       {a : A} {b : B} {c : C}
-                                       (acc : CodeB {vk-flip c} (g a)) (co : CodeB {vk b} (f a))
-            : reverse vk-flip vk (reverse-acc vk vk-flip acc co) = reverse-acc vk-flip vk co acc \elim co
-            | bb p => rewrite (inv_inv __) idp
-            | :bb: co (q, p) => run {
-              rewrite (reverse-acc-involution vk vk-flip _ co),
-              repeat {2} (rewrite (inv_inv _)) idp
-            }
         }
     }
 
