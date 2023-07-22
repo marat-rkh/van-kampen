@@ -1,8 +1,9 @@
 \import Equiv
+\import Paths
+\import Paths.Meta
 
-\func symEquiv {A B : \Type} (e : Equiv {A} {B}) : Equiv {B} {A} \cowith
-  | f => e.ret
-  | ret => e.f
-  | sec => e.f
-  | ret_f => e.f_ret
-  | f_sec => e.ret_f
+\func transport_Equiv {A : \Type} {B C : A -> \Type} {a a' : A} (p : a = a')
+                      {e : Equiv {B a} {C a}} {e' : Equiv {B a'} {C a'}}
+                      (f : \Pi (b : B a) -> transport C p (e b) = e' (transport B p b))
+  : transport (\lam a => Equiv {B a} {C a}) p e = e' \elim p
+  | idp => Equiv.equals (ext f)

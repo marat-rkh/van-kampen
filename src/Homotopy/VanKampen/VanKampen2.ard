@@ -2,6 +2,7 @@
 \import Equiv.Sigma
 \import Function.Meta
 \import Homotopy.Pushout
+\import Homotopy.VanKampen.Ext.Equiv
 \import Homotopy.VanKampen.Ext.Pushout
 \import Homotopy.VanKampen.Paths0
 \import Homotopy.VanKampen.VanKampen
@@ -113,14 +114,3 @@
 
   \func Loop1-Pushout (po : PushoutData f g) : (po =0 po) = code2 po po => {?}
 }
-
--- TODO unused?
-\func coe_Equiv {A B : I -> \Type} {e : Equiv {A left} {B left}} {e' : Equiv {A right} {B right}}
-                (f : \Pi (a : A left) -> coe B (e a) right = e' (coe A a right))
-  : coe (\lam i => Equiv {A i} {B i}) e right = e' => transport_Equiv {I} {A} {B} (path (\lam i => i)) f
-
-\func transport_Equiv {A : \Type} {B C : A -> \Type} {a a' : A} (p : a = a')
-                      {e : Equiv {B a} {C a}} {e' : Equiv {B a'} {C a'}}
-                      (f : \Pi (b : B a) -> transport C p (e b) = e' (transport B p b))
-  : transport (\lam a => Equiv {B a} {C a}) p e = e' \elim p
-  | idp => Equiv.equals (ext f)
