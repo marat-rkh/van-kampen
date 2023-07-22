@@ -15,7 +15,7 @@
 \open PushoutData (ppglue)
 
 \class VanKampen2 \noclassifying {A B C : \Type} (f : A -> B) (g : A -> C) {
-  \func code2(po1 po2 : PushoutData f g) : \Set
+  \func code2 (po1 po2 : PushoutData f g) : \Set
     | pinl b1, po2 => b-code b1 po2
     | pinr c1, po2 => c-code c1 po2
     | pglue a1, po2 => equiv= $ b-code-equiv-c-code a1 po2
