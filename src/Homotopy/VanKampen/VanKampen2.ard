@@ -15,6 +15,14 @@
 \open PushoutData (ppglue)
 
 \class VanKampen2 \noclassifying {A B C : \Type} (f : A -> B) (g : A -> C) {
+  \func vk (b : B) => \new VanKampen f g b
+
+  \func vk-flip (c : C) => \new VanKampen g f c
+
+  \func b-code (b : B) (po : PushoutData f g) => VanKampen.code {vk b} po
+
+  \func c-code (c : C) (po : PushoutData f g) => VanKampen.code {vk-flip c} (flip po)
+
   \func code2 (po1 po2 : PushoutData f g) : \Set
     | pinl b1, po2 => b-code b1 po2
     | pinr c1, po2 => c-code c1 po2
@@ -112,5 +120,16 @@
         }
     }
 
-  \func Loop1-Pushout (po : PushoutData f g) : (po =0 po) = code2 po po => {?}
+  -- https://github.com/HoTT/HoTT-Agda/blob/1.0/Homotopy/VanKampen.agda
+  \func encode (po1 po2 : PushoutData f g) (p : po1 =0 po2) : code2 po1 po2 => transport0 (code2 po1) p (idp-code2 po1)
+
+  \func idp-code2 (po : PushoutData f g) : code2 po po
+    | pinl b => VanKampen.idp-code {vk b}
+    | pinr c => VanKampen.idp-code {vk-flip c}
+    -- TODO If you remove type annotation the typechecker shows a very cryptic type. Why?
+--    | pglue a => pathOver ({?} : transport (\lam po => code2 po po) (ppglue a) (VanKampen.idp-code {vk (f a)}) = VanKampen.idp-code {vk-flip (g a)})
+    | pglue a => pathOver ({?} : transport (\lam po => code2 po po) (ppglue a) (VanKampen.idp-code {vk (f a)}) = VanKampen.idp-code {vk-flip (g a)})
+
+  \func transport-code2 {a : A} {po : PushoutData f g} (co : code2 (pinl (f a)) po)
+    : transport (\lam po' => code2 po' po) (ppglue a) co = code2.b-code-equiv-c-code a po co => idp
 }
