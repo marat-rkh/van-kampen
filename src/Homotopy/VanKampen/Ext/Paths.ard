@@ -1,0 +1,5 @@
+\import Paths
+
+\func transport-diag {A : \Type} (B : A -> A -> \Type) {a a' : A} (p : a = a') (b : B a a)
+  : transport (\lam x => B x x) p b = transport (\lam x => B x a') p (transport (B a) p b) \elim p
+  | idp => idp

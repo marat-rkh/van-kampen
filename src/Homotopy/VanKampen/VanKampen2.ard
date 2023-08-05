@@ -3,6 +3,7 @@
 \import Function.Meta
 \import Homotopy.Pushout
 \import Homotopy.VanKampen.Ext.Equiv
+\import Homotopy.VanKampen.Ext.Paths
 \import Homotopy.VanKampen.Ext.Pushout
 \import Homotopy.VanKampen.Paths0
 \import Homotopy.VanKampen.VanKampen
@@ -126,10 +127,14 @@
   \func idp-code2 (po : PushoutData f g) : code2 po po
     | pinl b => VanKampen.idp-code {vk b}
     | pinr c => VanKampen.idp-code {vk-flip c}
-    -- TODO If you remove type annotation the typechecker shows a very cryptic type. Why?
---    | pglue a => pathOver ({?} : transport (\lam po => code2 po po) (ppglue a) (VanKampen.idp-code {vk (f a)}) = VanKampen.idp-code {vk-flip (g a)})
-    | pglue a => pathOver ({?} : transport (\lam po => code2 po po) (ppglue a) (VanKampen.idp-code {vk (f a)}) = VanKampen.idp-code {vk-flip (g a)})
+    -- TODO If you replace the argument of pathOver with {?} the typechecker shows a very cryptic type. Why?
+    | pglue a => pathOver transport-code2-idp-code
 
-  \func transport-code2 {a : A} {po : PushoutData f g} (co : code2 (pinl (f a)) po)
-    : transport (\lam po' => code2 po' po) (ppglue a) co = code2.b-code-equiv-c-code a po co => idp
+  \func transport-code2-idp-code {a : A}
+    : transport (\lam po => code2 po po) (ppglue a) (VanKampen.idp-code {vk (f a)}) = VanKampen.idp-code {vk-flip (g a)} =>
+    run {
+      rewrite (transport-diag code2 (ppglue a) _),
+      rewrite (VanKampen.transport-code-b-pglue {vk _} a (VanKampen.idp-code {vk (f a)})),
+      {?}
+    }
 }
