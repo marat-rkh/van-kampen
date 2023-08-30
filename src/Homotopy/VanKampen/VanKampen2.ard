@@ -128,13 +128,19 @@
     | pinl b => VanKampen.idp-code {vk b}
     | pinr c => VanKampen.idp-code {vk-flip c}
     -- TODO If you replace the argument of pathOver with {?} the typechecker shows a very cryptic type. Why?
-    | pglue a => pathOver transport-code2-idp-code
+    | pglue a => pathOver transport-code2-pglue-idp-code
 
-  \func transport-code2-idp-code {a : A}
+  \func transport-code2-pglue-idp-code {a : A}
     : transport (\lam po => code2 po po) (ppglue a) (VanKampen.idp-code {vk (f a)}) = VanKampen.idp-code {vk-flip (g a)} =>
     run {
       rewrite (transport-diag code2 (ppglue a) _),
       rewrite (VanKampen.transport-code-b-pglue {vk _} a (VanKampen.idp-code {vk (f a)})),
-      {?}
+      rewrite (transport-code2-pglue-lemma _ _),
+      VanKampen.code-b-idp-idp=code-b {vk-flip _} _
     }
+
+  -- This means that transport of code2 with fixed second argument basically prepends idp
+  -- (see idp:cc: and idp:bb: above).
+  \func transport-code2-pglue-lemma {a : A} (po : PushoutData f g) (co : b-code (f a) po)
+    : transport (\lam x => code2 x po) (ppglue a) co = code2.b-code-equiv-c-code a po co => idp
 }

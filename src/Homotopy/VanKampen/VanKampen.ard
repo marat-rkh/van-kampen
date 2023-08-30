@@ -136,7 +136,6 @@
           rewrite (transport0_*>0 code {po0} {pinl (f x)} {pinl b} _ _ _),
           rewrite (decode-encode co),
           rewrite (transport_*> code {pinl (f x)} {pinr (g x)} {pinl b} _ _ _),
-        -- TODO I do not need this, but without it the expected type contains "redundant" transport
           rewrite (transport-code-b-pglue x co),
           rewrite (transport_*> code {pinr (g x)} {pinr (g y)} {pinl b} _ _ _),
           rewrite (transport-codeC _ _),
